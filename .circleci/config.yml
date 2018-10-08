@@ -14,10 +14,14 @@ jobs:
     # documented at https://circleci.com/docs/2.0/circleci-images/
     # - image: circleci/mongo:3.4.4
 
-    working_directory: ~/repo
+    working_directory: ~/repos/learning/angular/the-complete-guide-to-angular/recipe-app
 
     steps:
     - checkout
+
+    - run:
+        name: Show current branch
+        command: echo ${CIRCLE_BRANCH}
 
     # Download and cache dependencies
     - restore_cache:
@@ -26,12 +30,36 @@ jobs:
         # fallback to using the latest cache if no exact match is found
         - v1-dependencies-
 
-    - run: yarn install
+    - run:
+        name: Install local dependencies
+        command: yarn install
 
     - save_cache:
         paths:
         - node_modules
         key: v1-dependencies-{{ checksum "package.json" }}
 
+    - run:
+        name: Linting
+        command: npm run lint
+
     # run tests!
-    - run: yarn test
+    - run:
+        name: Testing
+        command: yarn test
+
+    - run:
+        name: building
+        command: |
+          if ["${CIRCLE_BRANCH}" == "staging"]; then
+            npm run build-qa
+          elif ["${CIRCLE_BRANCH}" == "master"]; then
+                      npm run build-prod
+          else
+            npm run build-dev
+          fi
+    # Cache the dist folder for the deploy job
+    - save_cache:
+        key: v1-dist-{{ .Environment.CIRCLE_BRANCH }}-{{ .Environment.CIRCLE_SHA1 }}
+        paths:
+        - dist
